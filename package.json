@@ -1,0 +1,26 @@
+{
+  "name": "bonk-doge-api",
+  "version": "1.0.0",
+  "description": "Bonk Doge",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon src/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SinHongChen/bonk-doge-api.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/SinHongChen/bonk-doge-api/issues"
+  },
+  "homepage": "https://github.com/SinHongChen/bonk-doge-api#readme",
+  "dependencies": {
+    "express": "^4.17.1",
+    "express-graphql": "^0.12.0",
+    "graphql-tag": "^2.12.6",
+    "graphql-tools": "^8.2.0"
+  }
+}

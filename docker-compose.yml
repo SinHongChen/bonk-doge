@@ -1,0 +1,45 @@
+version: '3'
+
+networks:
+  bonk-doge:
+    driver: bridge
+
+services:
+  api:
+    build: .
+    restart: always
+    volumes:
+      - "./:/usr/src/app"
+      - "/usr/src/app/node_modules"
+    env_file:
+      - .env
+    ports:
+      - "${API_PORT}:${API_PORT}"
+    depends_on:
+      - mysql
+      - phpmyadmin
+    networks:
+      - bonk-doge
+
+  mysql:
+    image: "mariadb:10.7.1"
+    volumes:
+      - "./db_data:/var/lib/mysql"
+    env_file:
+      - .env
+    networks:
+      bonk-doge:
+        aliases:
+          - mysql
+
+  phpmyadmin:
+    image: "phpmyadmin:5.1.1"
+    volumes:
+      - "./db_data:/var/lib/mysql"
+    environment:
+      - PMA_HOST=mysql
+      # - PMA_ARBITRARY=1
+    ports:
+      - "81:80"
+    networks:
+      - bonk-doge
