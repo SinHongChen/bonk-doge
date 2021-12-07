@@ -5,37 +5,30 @@ const { makeExecutableSchema } = require('@graphql-tools/schema');
 module.exports = makeExecutableSchema({
     typeDefs: gql`
         type Query {
-            userList: [User!]
-            userGet(id: ID!): User
+            UserList: [User!]
+            UserGet(ID: ID!): User
         }
         type Mutation {
-            userCreate(name: String!, email: String!): User
-            userUpdate(id: ID!, name: String, email: String): User
-            userDelete(id: ID!): UserRemoveID
+            UserLogin(Name: String!, Email: String!): User
+            UserUpdate(ID: ID!, Name: String, Email: String): User
+            UserDelete(ID: ID!): String
         }
         type User {
-            id: ID!
-            name: String!
-            email: String!
-            hello: String!
-        }
-        type UserRemoveID {
-            id: ID!
+            ID: ID!
+            Name: String!
+            Email: String!
         }
     `
     ,
     resolvers: {
         Query: {
-            userList: () => User.list(),
-            userGet: (_, { id }) => User.get(id)
+            UserList: () => User.list(),
+            UserGet: (_, { ID }) => User.get(ID)
         },
         Mutation: {
-            userCreate: (_, args) => User.create(args),
-            userUpdate: (_, args) => User.update(args),
-            userDelete: (_, { id }) => User.delete(id),
-        },
-        User: {
-            hello: ({ name }) => 'hello ' + name
+            UserLogin: (_, Args) => User.login(Args),
+            UserUpdate: (_, Args) => User.update(Args),
+            UserDelete: (_, { ID }) => User.delete(ID),
         }
     }
 })

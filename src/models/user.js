@@ -1,57 +1,50 @@
-let id = 1;
-const users = [
-    {
-        id: 1,
-        name: 'jack',
-        email: 'jack2316006@gmail.com'
-    }
-]
+const db = require('../db');
 
-var self = module.exports = {
-    create: ({ name, email }) => {
+module.exports = {
+    login: ({ Name, Email }) => {
         return new Promise((resolve, reject) => {
-            const user = {
-                id: ++id,
-                name,
-                email
-            }
-            users.push(user);
-            resolve(user);
+            db.select('Users', { Email }).then(results => {
+                if (results.length === 0)
+                    db.insert('Users', {
+                        Name,
+                        Email
+                    }).then(results => resolve(results))
+                else
+                    resolve(results[0])
+            }).catch(err => reject(err));
         })
     },
     list: () => {
         return new Promise((resolve, reject) => {
-            resolve(users);
+            db.select('Users')
+                .then(results => resolve(results))
+                .catch(err => reject(err));
         })
     },
-    get: (id) => {
+    get: (ID) => {
         return new Promise((resolve, reject) => {
-            const find = users.find(user => user.id == id);
-            if (find)
-                resolve(find);
-            else
-                reject('USER_NOT_FOUND');
+            db.select('Users', { ID })
+                .then(results => resolve(results[0]))
+                .catch(err => reject(err));
         })
     },
-    update: ({ id, name, email }) => {
+    update: ({ ID, Name, Email }) => {
         return new Promise((resolve, reject) => {
-            self.get(id).then(user => {
-                const index = users.findIndex(user => user.id == id);
-                users[index].name = name ? name : user.name;
-                users[index].email = email ? email : user.email;
-                resolve(users[index]);
-            }).catch(err => reject(err))
+            db.update('Users', {
+                ID
+            }, {
+                Name,
+                Email
+            })
+                .then(results => resolve(results[0]))
+                .catch(err => reject(err));
         })
     },
-    delete: (id) => {
+    delete: (ID) => {
         return new Promise((resolve, reject) => {
-            const index = users.findIndex(user => user.id == id);
-            if (index < 0)
-                reject('USER_NOT_FOUND');
-            else {
-                users.splice(index, 1);
-                resolve({ id });
-            }
+            db.delete('Users', { ID })
+                .then(results => resolve(results))
+                .catch(err => reject(err));
         })
     }
 }
