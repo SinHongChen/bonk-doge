@@ -1,30 +1,40 @@
 const db = require('./db.js');
 
 const self = module.exports = {
-    insert: (table, createInfo = {}) => {
+    insert: (table, insertInfo = {}) => {
         return db(table)
-            .insert(createInfo)
-            .then(result => self.select(table, { ID: result[0] }).then(results => results[0]))
+            .insert(insertInfo)
+            .then(result => self.get('Users', result[0]))
             .catch(err => {
                 console.log(err);
                 return `INSERT_${table.toUpperCase()}_ERROR`;
             })
     },
-    select: (table, whereInfo = {}, selectInfo = undefined) => {
+    select: (table, { selectInfo, whereInfo } = {}) => {
         return db(table)
             .select(selectInfo !== undefined ? selectInfo : '*')
-            .where(whereInfo)
+            .where(whereInfo !== undefined ? whereInfo : {})
             .then(result => result)
             .catch(err => {
                 console.log(err);
                 return `SELECT_${table.toUpperCase()}_ERROR`;
             })
     },
-    update: (table, whereInfo = {}, updateInfo = {}) => {
+    get: (table, ID) => {
         return db(table)
-            .update(updateInfo)
-            .where(whereInfo)
-            .then(result => self.select(table, { whereInfo: { ID: result[0] } }).then(results => results[0]))
+            .select('*')
+            .where({ ID })
+            .then(results => results[0])
+            .catch(err => {
+                console.log(err);
+                return `GET_${table.toUpperCase()}_ERROR`;
+            })
+    },
+    update: async (table, { updateInfo, whereInfo } = {}) => {
+        return db(table)
+            .update(updateInfo !== undefined ? updateInfo : {})
+            .where(whereInfo !== undefined ? whereInfo : {})
+            .then(() => self.get('Users', whereInfo.ID))
             .catch(err => {
                 console.log(err);
                 return `UPDATE_${table.toUpperCase()}_ERROR`;

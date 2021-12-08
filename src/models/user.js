@@ -3,7 +3,7 @@ const db = require('../db');
 module.exports = {
     login: ({ Name, Email }) => {
         return new Promise((resolve, reject) => {
-            db.select('Users', { Email }).then(results => {
+            db.select('Users', { whereInfo: { Email } }).then(results => {
                 if (results.length === 0)
                     db.insert('Users', {
                         Name,
@@ -23,20 +23,23 @@ module.exports = {
     },
     get: (ID) => {
         return new Promise((resolve, reject) => {
-            db.select('Users', { ID })
-                .then(results => resolve(results[0]))
+            db.get('Users', ID)
+                .then(results => resolve(results))
                 .catch(err => reject(err));
         })
     },
     update: ({ ID, Name, Email }) => {
         return new Promise((resolve, reject) => {
             db.update('Users', {
-                ID
-            }, {
-                Name,
-                Email
+                updateInfo: {
+                    Name,
+                    Email
+                },
+                whereInfo: {
+                    ID
+                }
             })
-                .then(results => resolve(results[0]))
+                .then(results => resolve(results))
                 .catch(err => reject(err));
         })
     },
