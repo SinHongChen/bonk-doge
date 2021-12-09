@@ -1,8 +1,10 @@
 const { mergeSchemas } = require('@graphql-tools/schema');
 const { graphqlHTTP } = require('express-graphql');
+const { applyMiddleware } = require('graphql-middleware');
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
+const oauth = require('./models/oauth');
 
 const server = express();
 const debug = process.env.DEBUG === 'true';
@@ -41,13 +43,36 @@ require('./migration');
 const User = require('./routers/user');
 const Card = require('./routers/card');
 
-const schemas = [User, Card];
+const schema = mergeSchemas({
+    schemas: [User, Card]
+});
+
+const authMiddleware = async (resolve, root, args, req, info) => {
+    const authorization = req.headers.authorization;
+    const origin = req.get('origin');
+    const auth = oauth(origin);
+    console.log(info.fieldName);
+    if (info.fieldName !== 'UserLogin') {
+        try {
+            await auth.getTokenInfo(authorization)
+        } catch (err) {
+            return Promise.reject(new Error('TOKEN_NOT_GOOD'));
+        }
+    }
+    return await resolve(root, args, req, info);
+};
+
+const schemaWithMiddleware = applyMiddleware(schema, authMiddleware);
 
 server.use('/', graphqlHTTP({
-    schema: mergeSchemas({
-        schemas
-    }),
-    graphiql: debug
+    schema: schemaWithMiddleware,
+    graphiql: debug,
+    customFormatErrorFn: (err) => {
+        return {
+            message: err.message,
+            path: err.path
+        }
+    }
 }))
 
 server.listen(port);

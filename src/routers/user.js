@@ -9,7 +9,7 @@ module.exports = makeExecutableSchema({
             UserGet(ID: ID!): User
         }
         type Mutation {
-            UserLogin(Name: String!, Email: String!): User
+            UserLogin(Code: String!): User
             UserUpdate(ID: ID!, Name: String, Email: String): User
             UserDelete(ID: ID!): String
         }
@@ -17,6 +17,9 @@ module.exports = makeExecutableSchema({
             ID: ID!
             Name: String!
             Email: String!
+            Picture_Url: String!
+            Access_Token: String!
+            Refresh_Token: String
         }
     `
     ,
@@ -26,7 +29,7 @@ module.exports = makeExecutableSchema({
             UserGet: (_, { ID }) => User.get(ID)
         },
         Mutation: {
-            UserLogin: (_, Args) => User.login(Args),
+            UserLogin: (_, Args, req) => User.login(Args, req),
             UserUpdate: (_, Args) => User.update(Args),
             UserDelete: (_, { ID }) => User.delete(ID),
         }

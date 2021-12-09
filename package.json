@@ -21,6 +21,8 @@
     "cors": "^2.8.5",
     "express": "^4.17.1",
     "express-graphql": "^0.12.0",
+    "googleapis": "^92.0.0",
+    "graphql-middleware": "^6.1.13",
     "graphql-tag": "^2.12.6",
     "graphql-tools": "^8.2.0",
     "knex": "^0.95.14",

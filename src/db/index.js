@@ -7,7 +7,7 @@ const self = module.exports = {
             .then(result => self.get('Users', result[0]))
             .catch(err => {
                 console.log(err);
-                return `INSERT_${table.toUpperCase()}_ERROR`;
+                return new Error(`INSERT_${table.toUpperCase()}_ERROR`);
             })
     },
     select: (table, { selectInfo, whereInfo } = {}) => {
@@ -17,7 +17,7 @@ const self = module.exports = {
             .then(result => result)
             .catch(err => {
                 console.log(err);
-                return `SELECT_${table.toUpperCase()}_ERROR`;
+                return new Error(`SELECT_${table.toUpperCase()}_ERROR`);
             })
     },
     get: (table, ID) => {
@@ -27,7 +27,7 @@ const self = module.exports = {
             .then(results => results[0])
             .catch(err => {
                 console.log(err);
-                return `GET_${table.toUpperCase()}_ERROR`;
+                return new Error(`GET_${table.toUpperCase()}_ERROR`);
             })
     },
     update: async (table, { updateInfo, whereInfo } = {}) => {
@@ -37,7 +37,7 @@ const self = module.exports = {
             .then(() => self.get('Users', whereInfo.ID))
             .catch(err => {
                 console.log(err);
-                return `UPDATE_${table.toUpperCase()}_ERROR`;
+                return new Error(`UPDATE_${table.toUpperCase()}_ERROR`);
             })
     },
     delete: (table, whereInfo = {}) => {
@@ -47,7 +47,7 @@ const self = module.exports = {
             .then(() => `${table.toUpperCase()}_DELETED`)
             .catch(err => {
                 console.log(err);
-                return `DELETE_${table.toUpperCase()}_ERROR`;
+                return new Error(`DELETE_${table.toUpperCase()}_ERROR`);
             })
     }
 }
