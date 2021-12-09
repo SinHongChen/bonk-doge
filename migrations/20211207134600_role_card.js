@@ -2,6 +2,7 @@ exports.up = function (knex) {
     return knex.schema.createTable('Role_Card', table => {
         table.increments('ID');
         table.string('Name', 255).notNullable();
+        table.string('Img', 255).notNullable();
         table.integer('Attribute_ID').notNullable().unsigned().references('ID').inTable('Attributes');
         table.integer('Star').notNullable();
         table.integer('Race_ID').notNullable().unsigned().references('ID').inTable('Races');
@@ -9,6 +10,7 @@ exports.up = function (knex) {
         table.text('Effect_Description','longtext').nullable();
         table.integer('Attack').notNullable();
         table.integer('Defense').notNullable();
+        table.uuid('UUID').notNullable();
     });
 };
 

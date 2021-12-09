@@ -39,10 +39,13 @@ require('./migration');
 
 // routers
 const User = require('./routers/user');
+const Card = require('./routers/card');
+
+const schemas = [User, Card];
 
 server.use('/', graphqlHTTP({
     schema: mergeSchemas({
-        schemas: [User]
+        schemas
     }),
     graphiql: debug
 }))
