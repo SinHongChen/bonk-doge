@@ -6,7 +6,7 @@ RUN apk upgrade && \
 
 RUN npm install nodemon -g
 
-COPY . .
+COPY ./package* ./
 
 RUN npm install
 

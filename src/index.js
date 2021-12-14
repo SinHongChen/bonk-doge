@@ -1,6 +1,5 @@
 const { mergeSchemas } = require('@graphql-tools/schema');
 const { graphqlHTTP } = require('express-graphql');
-const { applyMiddleware } = require('graphql-middleware');
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
@@ -36,9 +35,6 @@ server.use(morgan(function (tokens, req, res) {
     ].join(' ')
 }));
 
-// migration
-require('./migration');
-
 // routers
 const User = require('./routers/user');
 const Card = require('./routers/card');
@@ -47,25 +43,31 @@ const schema = mergeSchemas({
     schemas: [User, Card]
 });
 
-const authMiddleware = async (resolve, root, args, req, info) => {
+const authMiddleware = async (req, res, next) => {
     const authorization = req.headers.authorization;
     const origin = req.get('origin');
     const auth = oauth(origin);
-    console.log(info.fieldName);
-    if (info.fieldName !== 'UserLogin') {
+    const graphql = req.body.query;
+    const regex = /(?:mutation|query)(?: |\r|\n)*{(?: |\r|\n)*([A-Za-z_]+)/gi.exec(graphql)
+    
+    if (!regex)
+        res.status(500).send({ errors: [{ message: 'PARSE_QUERY_ERROR' }] });
+    else if (regex[1].toLocaleLowerCase() !== 'userlogin') {
         try {
             await auth.getTokenInfo(authorization)
+            next();
         } catch (err) {
-            return Promise.reject(new Error('TOKEN_NOT_GOOD'));
+            console.log('authMiddleware error: ' + err);
+            res.status(401).send({ errors: [{ message: 'TOKEN_NOT_GOOD' }] });
         }
-    }
-    return await resolve(root, args, req, info);
-};
+    } else
+        next();
+}
 
-const schemaWithMiddleware = applyMiddleware(schema, authMiddleware);
+server.use(authMiddleware);
 
 server.use('/', graphqlHTTP({
-    schema: schemaWithMiddleware,
+    schema,
     graphiql: debug,
     customFormatErrorFn: (err) => {
         return {
@@ -75,5 +77,9 @@ server.use('/', graphqlHTTP({
     }
 }))
 
-server.listen(port);
-console.log(`🚀 Bonk doge Server ready at http://localhost:${port}`);
+require('./migration').then(() => {
+    server.listen(port);
+    console.log(`🚀 Bonk doge Server ready at http://localhost:${port}`);
+
+    require('./socket');
+});
