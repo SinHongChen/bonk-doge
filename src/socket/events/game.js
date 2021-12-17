@@ -1,26 +1,26 @@
-const oauth = require('../../models/oauth');
+const auth = require('../../models/auth');
 const event = "mainGame";
 
 module.exports = function (client) {
     client.on(event, async (message) => {
         try {
             const {
-                token,
                 cmd,
                 data
             } = JSON.parse(message);
 
             // Check token is vaild
-            const auth = oauth(client.handshake.headers.origin);
-            await auth.getTokenInfo(token);
-            // console.log(await auth.getTokenInfo(token));
+            await auth(client.handshake);
 
             const res = {
 
             }
             client.emit(event, JSON.stringify({ "msg": 'hi' }));
         } catch (err) {
-            console.log(err);
+            if (err.response)
+                console.log(err.response.data); //err.response.data
+            else
+                console.log(err);
             client.disconnect();
         }
     })

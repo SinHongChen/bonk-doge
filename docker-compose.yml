@@ -23,6 +23,7 @@ services:
       - bonk-doge
 
   mysql:
+    restart: always
     image: "mariadb:10.7.1"
     volumes:
       - "./db_data:/var/lib/mysql"
@@ -34,6 +35,7 @@ services:
           - mysql
 
   phpmyadmin:
+    restart: always
     image: "phpmyadmin:5.1.1"
     volumes:
       - "./db_data:/var/lib/mysql"
@@ -44,3 +46,13 @@ services:
       - "81:80"
     networks:
       - bonk-doge
+
+  redis:
+    restart: always
+    image: "redis:6.2.6-alpine"
+    volumes:
+      - "./redis_data:/data"
+    networks:
+      bonk-doge:
+        aliases:
+          - redis

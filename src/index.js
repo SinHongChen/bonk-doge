@@ -3,15 +3,18 @@ const { graphqlHTTP } = require('express-graphql');
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
-const oauth = require('./models/oauth');
+const expressSession = require('express-session');
+const redis = require('./models/redis');
+const auth = require('./models/auth');
 
 const server = express();
+const RedisStore = require('connect-redis')(expressSession);
 const debug = process.env.DEBUG === 'true';
 const port = process.env.API_PORT | '4000';
 
 server.use(express.json())
 server.use(cors());
-morgan.token('body', (req, res) => 
+morgan.token('body', (req, res) =>
     JSON.stringify(req.body)
         .replace(/\t/g, '')
         .replace(/\\n/g, '')
@@ -19,13 +22,14 @@ morgan.token('body', (req, res) =>
         .replace(/[ ]+/g, ' ')
         .replace(/[ ]?:[ ]?/g, ': ')
 );
+morgan.token('session-id', (req, res) => `[${req.headers['session-id']}]`);
 server.use(morgan(function (tokens, req, res) {
     return [
         tokens.date(req, res, 'iso'),
         tokens.status(req, res),
         tokens.method(req, res),
         tokens.url(req, res),
-        tokens['remote-addr'](req, res),
+        tokens['session-id'](req, res),
         '-',
         tokens['response-time'](req, res), 'ms',
         '-',
@@ -34,6 +38,14 @@ server.use(morgan(function (tokens, req, res) {
         tokens.body(req, res)
     ].join(' ')
 }));
+
+// Session
+server.use(expressSession({
+    store: new RedisStore({ client: redis.redisClient }),
+    secret: process.env.TOKEN,
+    saveUninitialized: false,
+    resave: false,
+}))
 
 // routers
 const User = require('./routers/user');
@@ -44,27 +56,26 @@ const schema = mergeSchemas({
 });
 
 const authMiddleware = async (req, res, next) => {
-    const authorization = req.headers.authorization;
-    const origin = req.get('origin');
-    const auth = oauth(origin);
     const graphql = req.body.query;
-    const regex = /(?:mutation|query)(?: |\r|\n)*{(?: |\r|\n)*([A-Za-z_]+)/gi.exec(graphql)
-    
+    const regex = /(?:mutation|query)(?: |\r|\n)*{(?: |\r|\n)*([A-Za-z_]+)/gi.exec(graphql);
+    const filter = ['userlogin', '__schema'];
+
     if (!regex)
-        res.status(500).send({ errors: [{ message: 'PARSE_QUERY_ERROR' }] });
-    else if (regex[1].toLocaleLowerCase() !== 'userlogin') {
+        res.status(500).send({ errors: [{ message: 'PARSE_QUERY_ERROR' }], data: {} });
+    else if (filter.some(mutation => regex[1].toLocaleLowerCase() === mutation))
+        next();
+    else {
         try {
-            await auth.getTokenInfo(authorization)
+            await auth(req);
             next();
         } catch (err) {
             console.log('authMiddleware error: ' + err);
-            res.status(401).send({ errors: [{ message: 'TOKEN_NOT_GOOD' }] });
+            res.status(401).send({ errors: [{ message: 'TOKEN_NOT_GOOD' }], data: { [`${regex[1]}`]: null } });
         }
-    } else
-        next();
+    }
 }
 
-server.use(authMiddleware);
+server.post('*', authMiddleware);
 
 server.use('/', graphqlHTTP({
     schema,

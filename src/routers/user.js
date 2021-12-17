@@ -6,10 +6,11 @@ module.exports = makeExecutableSchema({
     typeDefs: gql`
         type Query {
             UserList: [User!]
-            UserGet(ID: ID!): User
+            UserInfo: User
         }
         type Mutation {
             UserLogin(Code: String!): User
+            UserLogout: String
             UserUpdate(ID: ID!, Name: String, Email: String): User
             UserDelete(ID: ID!): String
         }
@@ -18,18 +19,21 @@ module.exports = makeExecutableSchema({
             Name: String!
             Email: String!
             Picture_Url: String!
+            Session_ID: String!
+        }
+        type RefreshResult {
             Access_Token: String!
-            Refresh_Token: String
         }
     `
     ,
     resolvers: {
         Query: {
             UserList: () => User.list(),
-            UserGet: (_, { ID }) => User.get(ID)
+            UserInfo: (_, __, req) => User.get(req),
         },
         Mutation: {
             UserLogin: (_, Args, req) => User.login(Args, req),
+            UserLogout: (_, __, req) => User.logout(req),
             UserUpdate: (_, Args) => User.update(Args),
             UserDelete: (_, { ID }) => User.delete(ID),
         }

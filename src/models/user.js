@@ -1,5 +1,6 @@
 const { google } = require('googleapis');
 const oauth = require('./oauth');
+const redis = require('./redis');
 const db = require('../db');
 
 module.exports = {
@@ -12,8 +13,10 @@ module.exports = {
                 const oauth2 = google.oauth2({ version: 'v2', auth });
                 const userinfo = await oauth2.userinfo.get();
 
-                const Access_Token = token.tokens.access_token;
-                const Refresh_Token = token.tokens.refresh_token;
+                // save access_tolen and refresh_token to session
+                req.session.access_token = token.tokens.access_token;
+                req.session.refresh_token = token.tokens.refresh_token;
+                const Session_ID = req.sessionID;
                 const Picture_Url = userinfo.data.picture;
                 const Name = userinfo.data.name;
                 const Email = userinfo.data.email;
@@ -22,9 +25,9 @@ module.exports = {
                         db.insert('Users', {
                             Name,
                             Email
-                        }).then(results => resolve(Object.assign({ Access_Token, Refresh_Token, Picture_Url }, results)))
+                        }).then(results => resolve(Object.assign({ Picture_Url, Session_ID }, results)))
                     else
-                        resolve(Object.assign({ Access_Token, Refresh_Token, Picture_Url }, results[0]))
+                        resolve(Object.assign({ Picture_Url, Session_ID }, results[0]))
                 }).catch(err => reject(err));
             }).catch(err => {
                 if (err.response)
@@ -42,11 +45,28 @@ module.exports = {
                 .catch(err => reject(err));
         })
     },
-    get: (ID) => {
-        return new Promise((resolve, reject) => {
-            db.get('Users', ID)
-                .then(results => resolve(results))
-                .catch(err => reject(err));
+    get: (req) => {
+        return new Promise(async (resolve, reject) => {
+            const sessionID = req.headers['session-id'];
+            const origin = req.get('origin');
+            const auth = oauth(origin);
+            const session = await redis.getSess(sessionID);
+            if (session) {
+                const { access_token, refresh_token } = JSON.parse(session);
+                auth.setCredentials({ access_token, refresh_token });
+                const oauth2 = google.oauth2({ version: 'v2', auth });
+                oauth2.userinfo.get().then(userinfo => {
+                    const Session_ID = sessionID;
+                    const Picture_Url = userinfo.data.picture;
+                    const Email = userinfo.data.email;
+    
+                    db.select('Users', { whereInfo: { Email } }).then(results => {
+                        resolve(Object.assign({ Picture_Url, Session_ID }, results[0]));
+                    }).catch(err => reject(err));
+                }).catch(() => reject(new Error('GET_USER_INFO_ERROR')));
+            } else {
+                reject(new Error('GET_SESSION_ERROR'));
+            }
         })
     },
     update: ({ ID, Name, Email }) => {
@@ -69,6 +89,26 @@ module.exports = {
             db.delete('Users', { ID })
                 .then(results => resolve(results))
                 .catch(err => reject(err));
+        })
+    },
+    logout: (req) => {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const sessionID = req.headers['session-id'];
+                const origin = req.get('origin');
+                const auth = oauth(origin);
+                const session = await redis.getSess(sessionID);
+                if (session) {
+                    const { access_token, refresh_token } = JSON.parse(session);
+                    auth.setCredentials({ access_token, refresh_token });
+                    await redis.delSess(sessionID);
+                    await auth.revokeCredentials();
+                }
+                resolve('LOGOUT_SUCCESS');
+            } catch (err) {
+                console.log(err);
+                reject(new Error('LOGOUT_FAILED'));
+            }
         })
     }
 }
