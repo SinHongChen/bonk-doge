@@ -69,6 +69,7 @@ const authMiddleware = async (req, res, next) => {
             await auth(req);
             next();
         } catch (err) {
+            await redis.delSess(req.headers['session-id']);
             console.log('authMiddleware error: ' + err);
             res.status(401).send({ errors: [{ message: 'TOKEN_NOT_GOOD' }], data: { [`${regex[1]}`]: null } });
         }

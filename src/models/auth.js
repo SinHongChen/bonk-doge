@@ -5,26 +5,25 @@ const auth = async (req) => {
     const sessionID = req.headers['session-id'];
     const origin = req.headers['origin'];
     const auth = oauth(origin);
-    let access_token = '';
-    let refresh_token = '';
+    let tokens = {};
     let session = {};
 
     session = await redis.getSess(sessionID);
     if (session) {
         const sessionInfo = JSON.parse(session);
-        access_token = sessionInfo.access_token;
-        refresh_token = sessionInfo.refresh_token;
+        tokens = sessionInfo.tokens;
     }
 
-    auth.setCredentials({ access_token, refresh_token });
+    auth.setCredentials(tokens);
     const res = await auth.getAccessToken();
-    if (res.token !== access_token) {
-        let sessionInfo = JSON.parse(session);
-        sessionInfo.access_token = res.token;
+    if (res.token !== tokens.access_token) {
+        console.log('refresh token success');
+        tokens.access_token = res.token;
+        const sessionInfo = JSON.parse(session);
+        sessionInfo.tokens = auth.credentials;
         await redis.setSess(sessionID, JSON.stringify(sessionInfo));
-        access_token = res.token;
     }
-    return await auth.getTokenInfo(access_token);
+    return await auth.getTokenInfo(tokens.access_token);
 }
 
 module.exports = auth;

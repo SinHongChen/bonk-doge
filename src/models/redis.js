@@ -32,16 +32,18 @@ const self = module.exports = {
         })
     },
     del: (key) => {
-        return new Promise((resolve, reject) => {
+        return new Promise(async (resolve, reject) => {
             if (!key)
                 reject('key is required');
-            else
+            else if (await self.exists(key))
                 redisClient.del(key, (err, result) => {
                     if (err)
                         reject(err);
                     else
                         resolve(true);
                 })
+            else
+                resolve(false);
         })
     },
     getSess: (sessionID) => {

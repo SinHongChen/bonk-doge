@@ -14,8 +14,7 @@ module.exports = {
                 const userinfo = await oauth2.userinfo.get();
 
                 // save access_tolen and refresh_token to session
-                req.session.access_token = token.tokens.access_token;
-                req.session.refresh_token = token.tokens.refresh_token;
+                req.session.tokens = token.tokens;
                 const Session_ID = req.sessionID;
                 const Picture_Url = userinfo.data.picture;
                 const Name = userinfo.data.name;
@@ -52,8 +51,8 @@ module.exports = {
             const auth = oauth(origin);
             const session = await redis.getSess(sessionID);
             if (session) {
-                const { access_token, refresh_token } = JSON.parse(session);
-                auth.setCredentials({ access_token, refresh_token });
+                const { tokens } = JSON.parse(session);
+                auth.setCredentials(tokens);
                 const oauth2 = google.oauth2({ version: 'v2', auth });
                 oauth2.userinfo.get().then(userinfo => {
                     const Session_ID = sessionID;
@@ -99,8 +98,8 @@ module.exports = {
                 const auth = oauth(origin);
                 const session = await redis.getSess(sessionID);
                 if (session) {
-                    const { access_token, refresh_token } = JSON.parse(session);
-                    auth.setCredentials({ access_token, refresh_token });
+                    const { tokens } = JSON.parse(session);
+                    auth.setCredentials(tokens);
                     await redis.delSess(sessionID);
                     await auth.revokeCredentials();
                 }
