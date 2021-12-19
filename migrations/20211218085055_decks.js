@@ -3,6 +3,7 @@ exports.up = function (knex) {
         if (!exists) {
             return knex.schema.createTable('Decks', table => {
                 table.increments('ID');
+                table.integer('User_ID').notNullable().unsigned().references('ID').inTable('Users').comment('使用者');
                 table.text('Cards','longtext').notNullable().comment('卡牌陣列(JSON)');
                 table.comment('牌組');
             });

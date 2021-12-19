@@ -4,7 +4,7 @@ const self = module.exports = {
     insert: (table, insertInfo = {}) => {
         return db(table)
             .insert(insertInfo)
-            .then(result => self.get('Users', result[0]))
+            .then(result => self.get(table, result[0]))
             .catch(err => {
                 console.log(err);
                 return new Error(`INSERT_${table.toUpperCase()}_ERROR`);
@@ -30,11 +30,21 @@ const self = module.exports = {
                 return new Error(`GET_${table.toUpperCase()}_ERROR`);
             })
     },
+    _get: (table, whereInfo) => {
+        return db(table)
+            .select('*')
+            .where(whereInfo)
+            .then(results => results[0])
+            .catch(err => {
+                console.log(err);
+                return new Error(`PRIVATE_GET_${table.toUpperCase()}_ERROR`);
+            })
+    },
     update: async (table, { updateInfo, whereInfo } = {}) => {
         return db(table)
             .update(updateInfo !== undefined ? updateInfo : {})
             .where(whereInfo !== undefined ? whereInfo : {})
-            .then(() => self.get('Users', whereInfo.ID))
+            .then(() => self._get(table, whereInfo))
             .catch(err => {
                 console.log(err);
                 return new Error(`UPDATE_${table.toUpperCase()}_ERROR`);

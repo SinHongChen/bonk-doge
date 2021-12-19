@@ -3,6 +3,7 @@ const { graphqlHTTP } = require('express-graphql');
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
+const { graphqlUploadExpress } = require('graphql-upload');
 const expressSession = require('express-session');
 const redis = require('./models/redis');
 const auth = require('./models/auth');
@@ -57,7 +58,7 @@ const schema = mergeSchemas({
 
 const authMiddleware = async (req, res, next) => {
     const graphql = req.body.query;
-    const regex = /(?:mutation|query)(?: |\r|\n)*{(?: |\r|\n)*([A-Za-z_]+)/gi.exec(graphql);
+    const regex = /(?:mutation|query)(?:\(.*\))?(?: |\r|\n)*{(?: |\r|\n)*([A-Za-z_]+)/gi.exec(graphql);
     const filter = ['userlogin', '__schema'];
 
     if (!regex)
@@ -76,6 +77,7 @@ const authMiddleware = async (req, res, next) => {
     }
 }
 
+server.use(graphqlUploadExpress({ maxFileSize: 10000000, maxFiles: 1 }));
 server.post('*', authMiddleware);
 
 server.use('/', graphqlHTTP({

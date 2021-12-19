@@ -56,3 +56,18 @@ services:
       bonk-doge:
         aliases:
           - redis
+
+  minio:
+    restart: always
+    image: "minio/minio:latest"
+    command: server --console-address ":9001" /data
+    volumes:
+      - "./minio_data:/data"
+    env_file:
+      - .env
+    ports:
+      - "9001:9001"
+    networks:
+      bonk-doge:
+        aliases:
+          - minio

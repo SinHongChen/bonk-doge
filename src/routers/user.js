@@ -18,7 +18,9 @@ module.exports = makeExecutableSchema({
             ID: ID!
             Name: String!
             Email: String!
-            Picture_Url: String!
+            Picture_Url: String
+            Victory: Int!
+            Defeat: Int!
             Session_ID: String!
         }
         type RefreshResult {

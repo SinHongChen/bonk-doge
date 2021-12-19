@@ -1,13 +1,25 @@
 const db = require('../db');
+const Minio = require('./minio');
 const { v5: uuidv5 } = require('uuid');
 
 const categoryArray = ['Role', 'Effect'];
 const token = process.env.TOKEN;
 
-module.exports = {
-    create: ({ Category, ...args }) => {
-        return new Promise((resolve, reject) => {
+const self = module.exports = {
+    create: (Category, args) => {
+        return new Promise(async (resolve, reject) => {
+            const UUID = await self.genCardUUID(args.Name);
+            const { mimetype, createReadStream } = await args.Img;
 
+            self.uploadCardImg(UUID, mimetype, createReadStream).then(fileName => {
+                console.log(fileName);
+                args.Img = fileName;
+                args.UUID = UUID;
+                console.log(args);
+                db.insert(`${Category}_Card`, args)
+                    .then(() => resolve(UUID))
+                    .catch(err => reject(err));
+            }).catch(err => reject(err));
         })
     },
     list: ({ Keyword, Category }) => {
@@ -19,14 +31,52 @@ module.exports = {
                 .catch(err => reject(err));
         })
     },
-    update: ({ ID, ...args }) => {
-        return new Promise((resolve, reject) => {
-
+    update: (Category, { UUID, ...args }) => {
+        return new Promise(async (resolve, reject) => {
+            if (args.Img) {
+                const { mimetype, createReadStream } = await args.Img;
+                const fileName = await self.uploadCardImg(UUID, mimetype, createReadStream);
+                args.Img = fileName;
+            }
+            db.update(`${Category}_Card`, { updateInfo: args, whereInfo: { UUID } })
+                .then(() => resolve(UUID))
+                .catch(err => reject(err));
         })
     },
-    delete: (ID) => {
+    delete: (Category, UUID) => {
         return new Promise((resolve, reject) => {
-
+            db.delete(`${Category}_Card`, { UUID })
+                .then(results => resolve(results))
+                .catch(err => reject(err));
+        })
+    },
+    uploadCardImg: (UUID, mimetype, createReadStream) => {
+        return new Promise((resolve, reject) => {
+            const stream = createReadStream();
+            const ext = mimetype.split('/')[1];
+            const fileName = `${UUID}.${ext}`;
+            Minio.uploadObject(Minio.buckets.card, fileName, stream).then(() => resolve(fileName)).catch(err => reject(err));
+        })
+    },
+    natureList: () => {
+        return new Promise((resolve, reject) => {
+            db.select('Natures')
+                .then(results => resolve(results))
+                .catch(err => reject(err));
+        })
+    },
+    attributeList: () => {
+        return new Promise((resolve, reject) => {
+            db.select('Attributes')
+                .then(results => resolve(results))
+                .catch(err => reject(err));
+        })
+    },
+    raceList: () => {
+        return new Promise((resolve, reject) => {
+            db.select('Races')
+                .then(results => resolve(results))
+                .catch(err => reject(err));
         })
     },
     nature: (ID) => {

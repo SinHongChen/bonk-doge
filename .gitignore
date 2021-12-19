@@ -1,6 +1,7 @@
 node_modules
+package-lock.json
+.env
+
 db_data
 redis_data
-package-lock.json
-
-.env
+minio_data
