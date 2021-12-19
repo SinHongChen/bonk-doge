@@ -1,5 +1,6 @@
 const redis = require('redis');
 const redisClient = redis.createClient(6379, 'redis');
+redisClient.auth(process.env.REDIS_PASSWORD)
 
 const self = module.exports = {
     redisClient,

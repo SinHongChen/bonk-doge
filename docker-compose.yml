@@ -50,8 +50,11 @@ services:
   redis:
     restart: always
     image: "redis:6.2.6-alpine"
+    command: redis-server --requirepass ${REDIS_PASSWORD}
     volumes:
       - "./redis_data:/data"
+    env_file:
+      - .env
     networks:
       bonk-doge:
         aliases:
