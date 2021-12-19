@@ -6,7 +6,7 @@ const auth = async (req) => {
     const origin = req.headers['origin'];
     const auth = oauth(origin);
     let tokens = {};
-    let session = {};
+    let session = "";
 
     session = await redis.getSess(sessionID);
     if (session) {
@@ -19,6 +19,7 @@ const auth = async (req) => {
     if (res.token !== tokens.access_token) {
         console.log('refresh token success');
         tokens.access_token = res.token;
+        // update session
         const sessionInfo = JSON.parse(session);
         sessionInfo.tokens = auth.credentials;
         await redis.setSess(sessionID, JSON.stringify(sessionInfo));

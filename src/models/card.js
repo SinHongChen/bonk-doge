@@ -58,6 +58,11 @@ const self = module.exports = {
             Minio.uploadObject(Minio.buckets.card, fileName, stream).then(() => resolve(fileName)).catch(err => reject(err));
         })
     },
+    genCardUUID: (Name) => {
+        return new Promise((resolve) => {
+            resolve(uuidv5(Name, token));
+        })
+    },
     natureList: () => {
         return new Promise((resolve, reject) => {
             db.select('Natures')
@@ -100,9 +105,4 @@ const self = module.exports = {
                 .catch(err => reject(err));
         })
     },
-    genCardUUID: (Name) => {
-        return new Promise((resolve) => {
-            resolve(uuidv5(Name, token));
-        })
-    }
 }

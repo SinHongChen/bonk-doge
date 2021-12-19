@@ -13,8 +13,9 @@ module.exports = {
                 const oauth2 = google.oauth2({ version: 'v2', auth });
                 const userinfo = await oauth2.userinfo.get();
 
-                // save access_tolen and refresh_token to session
+                // save tokens to session
                 req.session.tokens = token.tokens;
+                
                 const Session_ID = req.sessionID;
                 const Picture_Url = userinfo.data.picture;
                 const Name = userinfo.data.name;
