@@ -10,6 +10,7 @@ module.exports = makeExecutableSchema({
         scalar Upload
         type Query {
             CardList(Keyword: String, Category: String, Nature_ID: Int): [Card!]
+            CardGet(UUID: String): Card
             DeckList(User_ID: Int!): [Deck!]
             DeckCardList(ID: ID!): Deck!
             NatureList: [Nature!]
@@ -17,12 +18,11 @@ module.exports = makeExecutableSchema({
             RaceList: [Race!]
         }
         type Mutation {
-            RoleCardCreate(Name: String!, Img: Upload!, Attribute_ID: Int!, Star: Int!, Race_ID: Int!, Effect_Assert: String, Effect_Description: String, Attack: Int!, Defense: Int!): String!
-            RoleCardUpdate(UUID: String!, Name: String, Img: Upload, Attribute_ID: Int, Star: Int, Race_ID: Int, Effect_Assert: String, Effect_Description: String, Attack: Int, Defense: Int): String!
-            RoleCardDelete(UUID: String!): String!
-            EffectCardCreate(Name: String!, Img: Upload!, Nature_ID: Int!, Effect_Assert: String, Effect_Description: String): String!
-            EffectCardUpdate(UUID: String!, Name: String, Img: Upload, Nature_ID: Int, Effect_Assert: String, Effect_Description: String): String!
-            EffectCardDelete(UUID: String!): String!
+            CardDelete(UUID: String!): String!
+            RoleCardCreate(Name: String!, Img: Upload!, Attribute_ID: String!, Star: String!, Race_ID: String!, Effect_Assert: String, Effect_Description: String, Attack: String!, Defense: String!): String!
+            RoleCardUpdate(UUID: String!, Name: String, Img: Upload, Attribute_ID: String, Star: String, Race_ID: String, Effect_Assert: String, Effect_Description: String, Attack: String, Defense: String): String!
+            EffectCardCreate(Name: String!, Img: Upload!, Nature_ID: String!, Effect_Assert: String, Effect_Description: String): String!
+            EffectCardUpdate(UUID: String!, Name: String, Img: Upload, Nature_ID: String, Effect_Assert: String, Effect_Description: String): String!
         }
         type Card {
             UUID: String!
@@ -67,6 +67,7 @@ module.exports = makeExecutableSchema({
         Upload: GraphQLUpload,
         Query: {
             CardList: (_, args) => Card.list(args),
+            CardGet: (_, { UUID }) => Card.get(UUID),
             DeckList: (_, args) => Deck.list(args),
             DeckCardList: (_, args) => Deck.getDeckCards(args),
             NatureList: () => Card.natureList(),
@@ -74,12 +75,11 @@ module.exports = makeExecutableSchema({
             RaceList: () => Card.raceList(),
         },
         Mutation: {
+            CardDelete: (_, { UUID }) => Card.delete(UUID),
             RoleCardCreate: (_, args) => Card.create('Role', args),
             RoleCardUpdate: (_, args) => Card.update('Role', args),
-            RoleCardDelete: (_, { UUID }) => Card.delete('Role', UUID),
             EffectCardCreate: (_, args) => Card.create('Effect', args),
             EffectCardUpdate: (_, args) => Card.update('Effect', args),
-            EffectCardDelete: (_, { UUID }) => Card.delete('Effect', UUID),
         },
         Card: {
             Img_Url: ({ Img }) => Minio.getPresignedUrl(Minio.buckets.card, Img),

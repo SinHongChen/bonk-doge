@@ -52,10 +52,19 @@ const uploadObject = (bucket, name, stream) => {
     })
 }
 
+const deleteObject = (bucket, name) => {
+    return new Promise((resolve, reject) => {
+        minioClient.removeObject(bucket, name).then(() => {
+            resolve('MINIO_OBJECT_DELETED');
+        }).catch(error => { console.log(error); reject("MINIO_DELETE_OBJECT_ERROR") })
+    })
+}
+
 module.exports = {
     minioClient,
     buckets,
     listObject,
     getPresignedUrl,
-    uploadObject
+    uploadObject,
+    deleteObject,
 }

@@ -17,10 +17,7 @@ module.exports = function (client) {
             }
             client.emit(event, JSON.stringify({ "msg": 'hi' }));
         } catch (err) {
-            if (err.response)
-                console.log(err.response.data); //err.response.data
-            else
-                console.log(err);
+            console.log(err.message);
             client.disconnect();
         }
     })
