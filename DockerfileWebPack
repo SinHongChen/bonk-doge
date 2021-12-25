@@ -1,0 +1,29 @@
+FROM node:17-alpine
+WORKDIR /usr/src/app
+
+RUN apk upgrade && \
+    apk add tzdata
+
+COPY ./ ./
+
+RUN npm install
+
+RUN npm run build
+
+FROM node:17-alpine
+WORKDIR /usr/src/app
+
+#To avoid fetch dev dependencies
+ENV NODE_ENV=production
+
+RUN apk upgrade && \
+    apk add tzdata
+
+COPY package* ./
+
+RUN npm install
+
+COPY --from=0 /usr/src/app/dist/index.bundle.js ./
+COPY ./migrations ./
+
+CMD ["node", "./index.bundle.js"]

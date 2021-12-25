@@ -1,0 +1,63 @@
+name: Deploy
+  
+on:
+  push:
+    branches:
+      - master
+env:
+  KEY: ${{ secrets.ACTION_PRIVATE_KEY_DEPLOY }}
+  HOST: ${{ secrets.MASTER_HOST }}
+  USER: ${{ secrets.MASTER_USER }}
+  REGISTRY: ${{ secrets.GH_REGISTRY }}
+  REPOSITORY: ${{ github.repository }}
+  DOCKER_USERNAME: ${{ github.actor }}
+  DOCKER_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+  # API: ${{ secrets.DEV_BACK_API }}
+  SHORT_SHA: ""
+  BRANCH_NAME: ""
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set env (short sha and branch name)
+        run: |
+          echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          echo "BRANCH_NAME=${GITHUB_REF#refs/heads/}" >> $GITHUB_ENV
+      - name: Build backend container image
+        run: |
+          echo "$DOCKER_PASSWORD" | docker login $REGISTRY -u $DOCKER_USERNAME --password-stdin
+          docker build -f ./DockerfileWebPack -t $REGISTRY/$REPOSITORY/back:$SHORT_SHA .
+          docker tag $REGISTRY/$REPOSITORY/back:$SHORT_SHA $REGISTRY/$REPOSITORY/back:$BRANCH_NAME
+          docker push $REGISTRY/$REPOSITORY/back:$SHORT_SHA
+          docker push $REGISTRY/$REPOSITORY/back:$BRANCH_NAME
+  # build-and-push-frontend-image:
+  #   runs-on: ubuntu-latest 
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #     - name: Set env (short sha and branch name)
+  #       run: |
+  #         echo "REACT_APP_BACK_END=$API" >> .env
+  #         echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+  #         echo "BRANCH_NAME=${GITHUB_REF#refs/heads/}" >> $GITHUB_ENV
+  #     - name: Build frontend container image
+  #       run: |
+  #         echo "$DOCKER_PASSWORD" | docker login $REGISTRY -u $DOCKER_USERNAME --password-stdin
+  #         docker build -f ./DockerfileFront -t $REGISTRY/$REPOSITORY/front:$SHORT_SHA .
+  #         docker tag $REGISTRY/$REPOSITORY/front:$SHORT_SHA $REGISTRY/$REPOSITORY/front:$BRANCH_NAME
+  #         docker push $REGISTRY/$REPOSITORY/front:$SHORT_SHA
+  #         docker push $REGISTRY/$REPOSITORY/front:$BRANCH_NAME
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs: [build-and-push-backend-image, build-and-push-frontend-image]
+    steps:
+      - name: set ssh key and deploy
+        run: |
+          eval $(ssh-agent)
+          echo "$KEY" > ~/deploy.pem
+          chmod 400 ~/deploy.pem
+          ssh-add ~/deploy.pem
+          mkdir -p ~/.ssh
+          echo "StrictHostKeyChecking no" > ~/.ssh/config
+          ssh $USER@$HOST "cd ./bonk-doge-api && docker-compose pull && docker-compose up -d"
