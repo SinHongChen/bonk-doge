@@ -24,6 +24,6 @@ COPY package* ./
 RUN npm install
 
 COPY --from=0 /usr/src/app/dist/index.bundle.js ./
-COPY ./migrations ./
+COPY migrations ./migrations
 
 CMD ["node", "./index.bundle.js"]

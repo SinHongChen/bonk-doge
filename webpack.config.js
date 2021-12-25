@@ -1,5 +1,6 @@
 const path = require("path");
 const nodeExternals = require('webpack-node-externals');
+const WebpackObfuscator = require('webpack-obfuscator');
 
 module.exports = {
     mode: "production",
@@ -12,15 +13,11 @@ module.exports = {
     externals: [
         nodeExternals()
     ],
-    module: {
-        rules: [
-            {
-                test: /\.(graphql|gql)$/,
-                exclude: /node_modules/,
-                loader: '@graphql-tools/webpack-loader'
-            }
-        ]
-    },
+    plugins: [
+        new WebpackObfuscator({
+            rotateStringArray: true
+        })
+    ],
     optimization: {
         chunkIds: "size",
         // method of generating ids for chunks
