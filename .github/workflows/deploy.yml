@@ -27,10 +27,10 @@ jobs:
       - name: Build backend container image
         run: |
           echo "$DOCKER_PASSWORD" | docker login $REGISTRY -u $DOCKER_USERNAME --password-stdin
-          docker build -f ./DockerfileWebPack -t $REGISTRY/$REPOSITORY/back:$SHORT_SHA .
-          docker tag $REGISTRY/$REPOSITORY/back:$SHORT_SHA $REGISTRY/$REPOSITORY/back:$BRANCH_NAME
-          docker push $REGISTRY/$REPOSITORY/back:$SHORT_SHA
-          docker push $REGISTRY/$REPOSITORY/back:$BRANCH_NAME
+          docker build -f ./DockerfileWebPack -t $REGISTRY/$REPOSITORY:$SHORT_SHA .
+          docker tag $REGISTRY/$REPOSITORY:$SHORT_SHA $REGISTRY/$REPOSITORY:$BRANCH_NAME
+          docker push $REGISTRY/$REPOSITORY:$SHORT_SHA
+          docker push $REGISTRY/$REPOSITORY:$BRANCH_NAME
   # build-and-push-frontend-image:
   #   runs-on: ubuntu-latest 
   #   steps:
