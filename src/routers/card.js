@@ -50,6 +50,7 @@ module.exports = makeExecutableSchema({
         type Deck {
             ID: ID!
             Name: String!
+            Img_Url: String
             Cards: [String!]
             CardsInfo: [Card!]
         }
@@ -96,6 +97,7 @@ module.exports = makeExecutableSchema({
             Category: ({ Nature_ID }) => Nature_ID ? 'Effect' : 'Role'
         },
         Deck: {
+            Img_Url: ({ Cards }) => Cards.length > 0 ? Card.get(Cards[0]).then(card => Minio.getPresignedUrl(Minio.buckets.card, card.Img)) : null,
             CardsInfo: ({ Cards }) => Card.getCards(Cards),
         }
     }

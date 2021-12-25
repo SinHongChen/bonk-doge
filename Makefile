@@ -19,6 +19,9 @@ down:
 start:
 	$(DC) up -d --build
 
+stop:
+	$(DC) stop
+
 re: down start
 
 migrate_new: ## Create new migrations inside /migrations folder, need to use name=
