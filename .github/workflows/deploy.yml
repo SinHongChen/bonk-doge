@@ -50,7 +50,7 @@ jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
-    needs: [build-and-push-backend-image, build-and-push-frontend-image]
+    needs: [docker]
     steps:
       - name: set ssh key and deploy
         run: |
