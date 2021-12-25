@@ -1,7 +1,7 @@
 const db = require('../db');
 const Minio = require('./minio');
 const { v5: uuidv5 } = require('uuid');
-const moment = require('momnet');
+const moment = require('moment');
 
 const categoryArray = ['Role', 'Effect'];
 const token = process.env.TOKEN;
