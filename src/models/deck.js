@@ -1,11 +1,27 @@
 const db = require('../db');
 
-const categoryArray = ['Role', 'Effect'];
-
-module.exports = {
-    create: ({  }) => {
+const self = module.exports = {
+    create: ({ User_ID, Name, UUID_Array }) => {
         return new Promise((resolve, reject) => {
-
+            db.insert('Decks', { User_ID, Name, Cards: JSON.stringify(UUID_Array) })
+                .then(deck => self.get({ ID: deck.ID }))
+                .then(result => resolve(result))
+                .catch(err => reject(err));
+        })
+    },
+    update: ({ ID, User_ID, Name, UUID_Array }) => {
+        return new Promise((resolve, reject) => {
+            db.update('Decks', { updateInfo: { User_ID, Name, Cards: JSON.stringify(UUID_Array) }, whereInfo: { ID } })
+                .then(deck => self.get({ ID: deck.ID }))
+                .then(result => resolve(result))
+                .catch(err => reject(err));
+        })
+    },
+    delete: (ID) => {
+        return new Promise((resolve, reject) => {
+            db.delete('Decks', { ID })
+                .then(result => resolve(result))
+                .catch(err => reject(err));
         })
     },
     list: ({ User_ID }) => {
@@ -21,23 +37,14 @@ module.exports = {
                 .catch(err => reject(err));
         })
     },
-    getDeckCards: ({ ID, Keyword, Category }) => {
+    get: ({ ID }) => {
         return new Promise((resolve, reject) => {
-            const whereInfo = Keyword ? (builder) => { builder.where('Name', 'like', `%${Keyword}%`) } : {};
-            const tables = Category && categoryArray.indexOf(Category) !== -1 ? [Category] : categoryArray;
-            Promise.all(tables.map(table => db.select(`${table}_Card`, { whereInfo })))
-                .then(async results => {
-                    const res = [];
-                    const cards = [].concat(...results);
-                    const deck = await db.get('Decks', ID);
-                    JSON.parse(deck.Cards).map(UUID => {
-                        const find = cards.find(card => card.UUID === UUID);
-                        if (find)
-                            res.push(find);
-                    })
-                    resolve(res);
+            db.get('Decks', ID)
+                .then(deck => {
+                    deck.Cards = JSON.parse(deck.Cards);
+                    resolve(deck);
                 })
                 .catch(err => reject(err));
         })
-    },
+    }
 }

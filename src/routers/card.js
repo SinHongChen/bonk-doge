@@ -12,7 +12,7 @@ module.exports = makeExecutableSchema({
             CardList(Keyword: String, Category: String, Nature_ID: Int): [Card!]
             CardGet(UUID: String): Card
             DeckList(User_ID: Int!): [Deck!]
-            DeckCardList(ID: ID!): Deck!
+            DeckGet(ID: ID!): Deck!
             NatureList: [Nature!]
             AttributeList: [Attribute!]
             RaceList: [Race!]
@@ -23,6 +23,9 @@ module.exports = makeExecutableSchema({
             RoleCardUpdate(UUID: String!, Name: String, Img: Upload, Attribute_ID: String, Star: String, Race_ID: String, Effect_Assert: String, Effect_Description: String, Attack: String, Defense: String): String!
             EffectCardCreate(Name: String!, Img: Upload!, Nature_ID: String!, Effect_Assert: String, Effect_Description: String): String!
             EffectCardUpdate(UUID: String!, Name: String, Img: Upload, Nature_ID: String, Effect_Assert: String, Effect_Description: String): String!
+            DeckCreate(User_ID: Int!, Name: String!, UUID_Array: [String!]!): Deck!
+            DeckUpdate(ID: ID!, Name: String!, UUID_Array: [String!]!): Deck!
+            DeckDelete(ID: ID!): String!
         }
         type Card {
             UUID: String!
@@ -46,6 +49,7 @@ module.exports = makeExecutableSchema({
         }
         type Deck {
             ID: ID!
+            Name: String!
             Cards: [String!]
             CardsInfo: [Card!]
         }
@@ -69,17 +73,20 @@ module.exports = makeExecutableSchema({
             CardList: (_, args) => Card.list(args),
             CardGet: (_, { UUID }) => Card.get(UUID),
             DeckList: (_, args) => Deck.list(args),
-            DeckCardList: (_, args) => Deck.getDeckCards(args),
+            DeckGet: (_, args) => Deck.get(args),
             NatureList: () => Card.natureList(),
             AttributeList: () => Card.attributeList(),
             RaceList: () => Card.raceList(),
         },
         Mutation: {
-            CardDelete: (_, { UUID }) => Card.delete(UUID),
             RoleCardCreate: (_, args) => Card.create('Role', args),
             RoleCardUpdate: (_, args) => Card.update('Role', args),
             EffectCardCreate: (_, args) => Card.create('Effect', args),
             EffectCardUpdate: (_, args) => Card.update('Effect', args),
+            CardDelete: (_, { UUID }) => Card.delete(UUID),
+            DeckCreate: (_, args) => Deck.create(args),
+            DeckUpdate: (_, args) => Deck.update(args),
+            DeckDelete: (_, { ID }) => Deck.delete(ID),
         },
         Card: {
             Img_Url: ({ Img }) => Minio.getPresignedUrl(Minio.buckets.card, Img),
@@ -89,7 +96,7 @@ module.exports = makeExecutableSchema({
             Category: ({ Nature_ID }) => Nature_ID ? 'Effect' : 'Role'
         },
         Deck: {
-            CardsInfo: ({ ID }) => Deck.getDeckCards({ ID }),
+            CardsInfo: ({ Cards }) => Card.getCards(Cards),
         }
     }
 })

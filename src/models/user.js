@@ -1,13 +1,11 @@
 const { google } = require('googleapis');
-const oauth = require('./oauth');
 const redis = require('./redis');
 const db = require('../db');
 
 module.exports = {
     login: ({ Code }, req) => {
         return new Promise((resolve, reject) => {
-            const origin = req.get('origin');
-            const auth = oauth(origin);
+            const auth = req.auth;
             auth.getToken(Code).then(async token => {
                 auth.setCredentials(token.tokens);
                 const oauth2 = google.oauth2({ version: 'v2', auth });
@@ -47,26 +45,17 @@ module.exports = {
     },
     get: (req) => {
         return new Promise(async (resolve, reject) => {
-            const sessionID = req.headers['session-id'];
-            const origin = req.get('origin');
-            const auth = oauth(origin);
-            const session = await redis.getSess(sessionID);
-            if (session) {
-                const { tokens } = JSON.parse(session);
-                auth.setCredentials(tokens);
-                const oauth2 = google.oauth2({ version: 'v2', auth });
-                oauth2.userinfo.get().then(userinfo => {
-                    const Session_ID = sessionID;
-                    const Picture_Url = userinfo.data.picture;
-                    const Email = userinfo.data.email;
-    
-                    db.select('Users', { whereInfo: { Email } }).then(results => {
-                        resolve(Object.assign({ Picture_Url, Session_ID }, results[0]));
-                    }).catch(err => reject(err));
-                }).catch(() => reject(new Error('GET_USER_INFO_ERROR')));
-            } else {
-                reject(new Error('GET_SESSION_ERROR'));
-            }
+            const auth = req.auth;
+            const oauth2 = google.oauth2({ version: 'v2', auth });
+            oauth2.userinfo.get().then(userinfo => {
+                const Session_ID = req.headers['session-id'];
+                const Picture_Url = userinfo.data.picture;
+                const Email = userinfo.data.email;
+
+                db.select('Users', { whereInfo: { Email } }).then(results => {
+                    resolve(Object.assign({ Picture_Url, Session_ID }, results[0]));
+                }).catch(err => reject(err));
+            }).catch(() => reject(new Error('GET_USER_INFO_ERROR')));
         })
     },
     update: ({ ID, Name, Email }) => {
@@ -94,16 +83,9 @@ module.exports = {
     logout: (req) => {
         return new Promise(async (resolve, reject) => {
             try {
-                const sessionID = req.headers['session-id'];
-                const origin = req.get('origin');
-                const auth = oauth(origin);
-                const session = await redis.getSess(sessionID);
-                if (session) {
-                    const { tokens } = JSON.parse(session);
-                    auth.setCredentials(tokens);
-                    await redis.delSess(sessionID);
-                    await auth.revokeCredentials();
-                }
+                const auth = req.auth;
+                await redis.delSess(req.headers['session-id']);
+                await auth.revokeCredentials();
                 resolve('LOGOUT_SUCCESS');
             } catch (err) {
                 console.log(err);

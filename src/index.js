@@ -7,6 +7,7 @@ const { graphqlUploadExpress } = require('graphql-upload');
 const expressSession = require('express-session');
 const redis = require('./models/redis');
 const auth = require('./models/auth');
+const oauth = require('./models/oauth');
 
 const server = express();
 const RedisStore = require('connect-redis')(expressSession);
@@ -77,7 +78,21 @@ const authMiddleware = async (req, res, next) => {
     }
 }
 
+const setAuth = async (req, res, next) => {
+    const sessionID = req.headers['session-id'];
+    const origin = req.get('origin');
+    const auth = oauth(origin);
+    const session = await redis.getSess(sessionID);
+    if (session) {
+        const { tokens } = JSON.parse(session);
+        auth.setCredentials(tokens);
+    }
+    req.auth = auth;
+    next();
+}
+
 server.use(graphqlUploadExpress({ maxFileSize: 10000000, maxFiles: 1 }));
+server.post('*', setAuth);
 server.post('*', authMiddleware);
 
 server.use('/', graphqlHTTP({

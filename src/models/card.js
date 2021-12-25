@@ -15,7 +15,6 @@ const self = module.exports = {
             self.uploadCardImg(UUID, mimetype, createReadStream).then(fileName => {
                 args.Img = fileName;
                 args.UUID = UUID;
-                console.log(args);
                 db.insert(`${Category}_Card`, args)
                     .then(() => resolve(UUID))
                     .catch(err => reject(err));
@@ -26,6 +25,22 @@ const self = module.exports = {
         return new Promise((resolve, reject) => {
             Promise.all(categoryArray.map(table => db.select(`${table}_Card`, { whereInfo: { UUID } })))
                 .then(results => resolve([].concat(...results)[0]))
+                .catch(err => reject(err));
+        })
+    },
+    getCards: (UUID_Array) => {
+        return new Promise((resolve, reject) => {
+            Promise.all(categoryArray.map(table => db.select(`${table}_Card`)))
+                .then(results => {
+                    let res = [];
+                    const cards = [].concat(...results);
+                    UUID_Array.map(UUID => {
+                        const find = cards.find(card => card.UUID === UUID);
+                        if (find)
+                            res.push(find);
+                    })
+                    resolve(res);
+                })
                 .catch(err => reject(err));
         })
     },

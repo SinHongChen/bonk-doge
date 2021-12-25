@@ -37,7 +37,7 @@ const self = module.exports = {
             .then(results => results[0])
             .catch(err => {
                 console.log(err);
-                return new Error(`PRIVATE_GET_${table.toUpperCase()}_ERROR`);
+                return new Error(`_GET_${table.toUpperCase()}_ERROR`);
             })
     },
     update: async (table, { updateInfo, whereInfo } = {}) => {

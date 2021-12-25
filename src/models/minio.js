@@ -31,7 +31,7 @@ const listObject = (bucket, path) => {
         })
         dataStream.on('error', error => {
             console.log(error);
-            reject('MINIO_LIST_OBJECT_ERROR');
+            reject(new Error("MINIO_LIST_OBJECT_ERROR"));
         })
     })
 }
@@ -40,7 +40,7 @@ const getPresignedUrl = (bucket, name) => {
     return new Promise((resolve, reject) => {
         minioClient.presignedUrl('GET', bucket, name, 24*60*60).then(url => {
             resolve(url);
-        }).catch(error => { console.log(error); reject("MINIO_GET_PRESIGNEDURL_ERROR") })
+        }).catch(error => { console.log(error); reject(new Error("MINIO_GET_PRESIGNEDURL_ERROR")) })
     })
 }
 
@@ -48,7 +48,7 @@ const uploadObject = (bucket, name, stream) => {
     return new Promise((resolve, reject) => {
         minioClient.putObject(bucket, name, stream).then(objInfo => {
             resolve(objInfo);
-        }).catch(error => { console.log(error); reject("MINIO_UPLOAD_OBJECT_ERROR") })
+        }).catch(error => { console.log(error); reject(new Error("MINIO_UPLOAD_OBJECT_ERROR")) })
     })
 }
 
@@ -56,7 +56,7 @@ const deleteObject = (bucket, name) => {
     return new Promise((resolve, reject) => {
         minioClient.removeObject(bucket, name).then(() => {
             resolve('MINIO_OBJECT_DELETED');
-        }).catch(error => { console.log(error); reject("MINIO_DELETE_OBJECT_ERROR") })
+        }).catch(error => { console.log(error); reject(new Error("MINIO_DELETE_OBJECT_ERROR")) })
     })
 }
 
