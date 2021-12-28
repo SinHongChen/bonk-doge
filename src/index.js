@@ -1,9 +1,9 @@
 const { mergeSchemas } = require('@graphql-tools/schema');
 const { graphqlHTTP } = require('express-graphql');
+const { graphqlUploadExpress } = require('graphql-upload');
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
-const { graphqlUploadExpress } = require('graphql-upload');
 const expressSession = require('express-session');
 const redis = require('./models/redis');
 const auth = require('./models/auth');

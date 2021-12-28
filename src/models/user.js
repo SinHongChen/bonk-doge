@@ -13,7 +13,7 @@ module.exports = {
 
                 // save tokens to session
                 req.session.tokens = token.tokens;
-                
+
                 const Session_ID = req.sessionID;
                 const Picture_Url = userinfo.data.picture;
                 const Name = userinfo.data.name;
@@ -23,9 +23,14 @@ module.exports = {
                         db.insert('Users', {
                             Name,
                             Email
-                        }).then(results => resolve(Object.assign({ Picture_Url, Session_ID }, results)))
-                    else
+                        }).then(results => {
+                            req.session.userID = results.ID;
+                            resolve(Object.assign({ Picture_Url, Session_ID }, results));
+                        })
+                    else {
+                        req.session.userID = results[0].ID;
                         resolve(Object.assign({ Picture_Url, Session_ID }, results[0]))
+                    }
                 }).catch(err => reject(err));
             }).catch(err => {
                 if (err.response)

@@ -30,7 +30,6 @@ module.exports = makeExecutableSchema({
         type Card {
             UUID: String!
             Name: String!
-            Img: String!
             Img_Url: String!
             Category: String!
             Effect_Assert: String
