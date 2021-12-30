@@ -27,18 +27,15 @@ module.exports = function (client) {
             redis.pushList(redis.listKey.playerQueue, JSON.stringify({ clientID, userID: session.userID }));
 
             // send player not found msg
-            const keepalive = setInterval(() => {
+            while(await redis.getPlayer(clientID) === undefined) {
                 console.log("PLAYER_NOT_FOUND");
                 client.emit(event, JSON.stringify({ ...SUCCESS, "msg": "PLAYER_NOT_FOUND" }));
-            }, 5 * 1000);
+                await sleep(5);
+            }
 
-            // wait distribution System response
-            client.on("matchPlayer", (data) => {
-                clearInterval(keepalive);
-                console.log(data);
-                // res
-                client.emit(event, JSON.stringify({ ...SUCCESS, "msg": "PLAYER_FOUND", data }))
-            });
+            // get player game data from redis
+            const data = await redis.getPlayer(clientID);
+            client.emit(event, JSON.stringify({ ...SUCCESS, "msg": "PLAYER_FOUND", data }))
         } catch (err) {
             console.error(err);
             client.emit(event, JSON.stringify(ERROR));

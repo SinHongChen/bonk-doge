@@ -113,6 +113,15 @@ const self = module.exports = {
     delSess: (sessionID) => {
         return self.del('sess:' + sessionID);
     },
+    getPlayer: (player) => {
+        return self.get('player:' + player);
+    },
+    setPlayer: (player, data) => {
+        return self.set('player:' + player, data);
+    },
+    delPlayer: (player) => {
+        return self.del('player:' + player);
+    },
     exists: (key) => {
         return new Promise((resolve, reject) => {
             redisClient.exists(key, (err, exists) => {

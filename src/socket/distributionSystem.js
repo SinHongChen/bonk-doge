@@ -4,28 +4,29 @@ const redis = require('../models/redis');
 const delay = 5; // second
 const token = process.env.TOKEN;
 
-const interval = (socket) => {
-    playerQueueSystem(socket)
+const interval = () => {
+    playerQueueSystem()
         .then(() => new Promise((resolve) => setTimeout(resolve, delay * 1000))) // delay
         .then(() => {
-            interval(socket);
+            interval();
         })
 }
 
-module.exports = (socket) => {
-    interval(socket);
+module.exports = () => {
+    interval();
 }
 
 const playerQueueSystem = async () => {
-    if (await redis.listLength(redis.listKey.playerQueue) >= 2) {
+    const redisKey = redis.listKey.playerQueue;
+    if (await redis.listLength(redisKey) >= 2) {
         const gameUUID = uuidv5(new Date().toISOString(), token);
-        const playerA_JSON = await redis.leftPopList(key);
-        const playerB_JSON = await redis.leftPopList(key);
+        const playerA_JSON = await redis.leftPopList(redisKey);
+        const playerB_JSON = await redis.leftPopList(redisKey);
 
         const playerA = JSON.parse(playerA_JSON);
         const playerB = JSON.parse(playerB_JSON);
 
-        socket.to(playerA.clientID).emit("matchPlayer", { gameUUID, userID: playerB.userID });
-        socket.to(playerB.clientID).emit("matchPlayer", { gameUUID, userID: playerA.userID });
+        redis.setPlayer(playerA.clientID, JSON.stringify({ gameUUID, userID: playerA.userID }));
+        redis.setPlayer(playerB.clientID, JSON.stringify({ gameUUID, userID: playerB.userID }));
     }
 }
