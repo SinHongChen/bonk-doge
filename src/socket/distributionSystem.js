@@ -26,7 +26,7 @@ const playerQueueSystem = async () => {
         const playerA = JSON.parse(playerA_JSON);
         const playerB = JSON.parse(playerB_JSON);
 
-        redis.setPlayer(playerA.clientID, JSON.stringify({ gameUUID, userID: playerA.userID }));
-        redis.setPlayer(playerB.clientID, JSON.stringify({ gameUUID, userID: playerB.userID }));
+        await redis.setPlayer(playerA.clientID, JSON.stringify({ gameUUID, enemyUserID: playerB.userID, enemyClientID: playerB.clientID }));
+        await redis.setPlayer(playerB.clientID, JSON.stringify({ gameUUID, enemyUserID: playerA.userID, enemyClientID: playerA.clientID }));
     }
 }

@@ -104,6 +104,32 @@ const self = module.exports = {
                 })
         })
     },
+    deleteListValue: (key, value) => {
+        return new Promise(async (resolve, reject) => {
+            if (!key || !value)
+                reject('key && value are required');
+            else
+                redisClient.lrem(key, 1, value, (err, result) => {
+                    if (err)
+                        reject(err);
+                    else
+                        resolve(result);
+                })
+        })
+    },
+    listValue: (key) => {
+        return new Promise(async (resolve, reject) => {
+            if (!key)
+                reject('key is required');
+            else
+                redisClient.lrange(key, 0, -1, (err, result) => {
+                    if (err)
+                        reject(err);
+                    else
+                        resolve(result);
+                })
+        })
+    },
     getSess: (sessionID) => {
         return self.get('sess:' + sessionID);
     },
