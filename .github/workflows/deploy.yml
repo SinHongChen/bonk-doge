@@ -60,4 +60,4 @@ jobs:
           ssh-add ~/deploy.pem
           mkdir -p ~/.ssh
           echo "StrictHostKeyChecking no" > ~/.ssh/config
-          ssh $USER@$HOST "cd ./bonk-doge-api && docker-compose pull && docker-compose up -d"
+          ssh $USER@$HOST "cd ./bonk-doge-api && docker-compose pull api && docker-compose up -d"
