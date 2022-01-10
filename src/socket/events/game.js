@@ -1,7 +1,11 @@
 const auth = require('../../models/auth');
 const redis = require('../../models/redis');
 const Deck = require('../../models/deck');
+const Card = require('../../models/card');
+const GameRecord = require('../../models/gameRecord');
 const { sleep } = require('../../models/util');
+const { validate: uuidValidate } = require('uuid');
+const moment = require('moment');
 const event = "mainGame";
 
 const GAME_INFO = { "state": 200, "msg": "GAME_INFO", "data": {} };
@@ -24,12 +28,14 @@ const getPlayerResult = async (player) => {
         'currentPlayer': player.currentPlayer,
         'self': {
             boardCards: player.boardCards,
+            coveredCards: player.coveredCards,
             handCards: player.handCards,
             remainingCardsNumber: player.remainingCards.length,
             hp: player.hp,
         },
         'enemy': {
             boardCards: enemy.boardCards,
+            coveredCardsNumber: enemy.coveredCards.length,
             handCardsNumber: enemy.handCards.length,
             remainingCardsNumber: enemy.remainingCards.length,
             hp: enemy.hp,
@@ -58,6 +64,20 @@ const _takeCard = (player) => {
     player.handCards = player.handCards.concat(card);
 }
 
+const gameRecord = async (winner, loser, isTie) => {
+    const startTime = winner.startTime > loser.startTime ? winner.startTime : loser.startTime;
+    const record = {
+        Winner: winner.userID,
+        Loser: loser.userID,
+        IsTie: isTie,
+        Winner_Cards: JSON.stringify(winner.deckCards),
+        Loser_Cards: JSON.stringify(loser.deckCards),
+        Total_Time: moment().diff(startTime, 'minutes'),
+    };
+    // game record
+    await GameRecord.create(record);
+}
+
 const init = async (client, data) => {
     const clientID = client.id;
     const player = await getPlayer(clientID);
@@ -65,9 +85,14 @@ const init = async (client, data) => {
     const session = JSON.parse(await redis.getSess(sessionID));
     const deck = await Deck.get({ ID: data.deck });
 
+    // for game record
+    player.startTime = moment();
+    player.deckCards = deck.Cards;
+    // game
     player.userID = session.userID;
     player.remainingCards = deck.Cards;
     player.boardCards = [];
+    player.coveredCards = [];
     player.handCards = [];
     player.hp = HP;
     player.init = true;
@@ -120,7 +145,14 @@ const putCard = async (client, data) => {
         throw new Error('Put card not found in handCards ' + data.card);
     }
     const card = player.handCards.splice(index, 1); // 抽出並移除原本的牌
-    player.boardCards = player.boardCards.concat(card);
+    const cardInfo = await Card.get(card);
+    if (cardInfo.Nature_ID === 2 && player.coveredCards.length > 0) {
+        throw new Error('Already have covered cards on board ' + data.card);
+    }
+    if (cardInfo.Nature_ID === 2) // covered trap card
+        player.coveredCards = player.coveredCards.concat(card);
+    else
+        player.boardCards = player.boardCards.concat(card);
     // save data   
     await redis.setPlayer(clientID, JSON.stringify(player));
     // send data
@@ -130,10 +162,74 @@ const putCard = async (client, data) => {
 const assert = async (client, data) => {
     const clientID = client.id;
     const player = await getPlayer(clientID);
+    const enemy = JSON.parse(await redis.getPlayer(player.enemyClientID));
+    const card = await Card.get(data.card);
+    const action = data.action;
+    // check player card on board
+    const playerCardIndex = player.boardCards.indexOf(data.card); // find card index of remainingCards
+    if (playerCardIndex < 0) {
+        throw new Error('Card not found on player board ' + data.card);
+    }
+    // coveredCards
+    const playerCoveredCards = await Card.getCards(player.coveredCards);
+    const enemyCoveredCards = await Card.getCards(enemy.coveredCards);
+    // TODO: coveredCards check
+
+    if (action === 'attack') {
+        // TODO: card assert
+
+        // attack
+        if (uuidValidate(data.target)) { // attack card
+            const target = await Card.get(data.target);
+            // check player card on board
+            const enemyCardIndex = enemy.boardCards.indexOf(data.target); // find card index of remainingCards
+            if (enemyCardIndex < 0) {
+                throw new Error('Card not found on enemy board ' + data.card);
+            }
+
+            if (card.Attack > target.Defense) {
+                // 對方卡牌被破壞，敵方會受到傷害
+                // delete target card
+                enemy.boardCards.splice(enemyCardIndex, 1)
+                // attack enemy
+                const attack = card.Attack - target.Defense;
+                enemy.hp -= attack;
+            } else if (card.Attack === target.Defense) {
+                // 雙方卡牌都會被破壞
+                player.boardCards.splice(playerCardIndex, 1)
+                enemy.boardCards.splice(enemyCardIndex, 1)
+            } else {
+                // 我方卡牌被破壞，我會受到傷害
+                // delete player card
+                player.boardCards.splice(playerCardIndex, 1)
+                // attack player
+                const attack = target.Defense - card.Attack;
+                player.hp -= attack;
+            }
+        } else if (data.target === 'player') { // attack player
+            if (enemy.boardCards.length > 0) {
+                throw new Error('Enemy have other cards on board, player can\'t attack enemy directly');
+            }
+            enemy.hp -= card.Attack;
+        } else {
+            throw new Error('Invalid target ' + data.target);
+        }
+    } else if (action === 'effect') {
+        // TODO: effect
+    } else {
+        throw new Error('Invalid action ' + action);
+    }
+
     // save data   
     await redis.setPlayer(clientID, JSON.stringify(player));
-    // send data
-    await sendDataToPlayerAndEnemy(client);
+    await redis.setPlayer(player.enemyClientID, JSON.stringify(enemy));
+    // 其中一方生命值歸零，結束遊戲
+    if (player.hp <= 0 || enemy.hp <= 0)
+        await endGame(client);
+    else {
+        // send data
+        await sendDataToPlayerAndEnemy(client);
+    }
 }
 
 const endTurn = async (client) => {
@@ -163,10 +259,15 @@ const endTurn = async (client) => {
 const surrender = async (client) => {
     const clientID = client.id;
     const player = await getPlayer(clientID);
-    client.emit(event, JSON.stringify({ ...RESULT, 'data': { 'winner': player.enemyUserID, 'reason': 'SURRENDER' } }));
-    client.to(player.enemyClientID).emit(event, JSON.stringify({ ...RESULT, 'data': { 'winner': player.enemyUserID, 'reason': 'SURRENDER' } }));
-    await redis.delPlayer(player.enemyClientID);
+    const enemy = JSON.parse(await redis.getPlayer(player.enemyClientID));
+    // game record
+    await gameRecord(enemy, player, false);
+    // send data
+    const data = { 'winner': enemy.userID, 'reason': 'SURRENDER' };
+    client.emit(event, JSON.stringify({ ...RESULT, data }));
+    client.to(player.enemyClientID).emit(event, JSON.stringify({ ...RESULT, data }));
     await redis.delPlayer(clientID);
+    await redis.delPlayer(player.enemyClientID);
 }
 
 // 正常結束遊戲
@@ -175,18 +276,27 @@ const endGame = async (client) => {
     const player = await getPlayer(clientID);
     const enemy = JSON.parse(await redis.getPlayer(player.enemyClientID));
 
-    let winner = null;
-    if (player.hp > enemy.hp)
-        winner = player.userID;
-    else if (player.hp === enemy.hp)
-        winner = null;
-    else
-        winner = enemy.userID;
+    let winner, loser, isTie = false;
+    if (player.hp > enemy.hp) {
+        winner = player;
+        loser = enemy;
+    } else if (player.hp === enemy.hp) {
+        winner = player;
+        loser = enemy;
+        isTie = true;
+    } else {
+        winner = enemy;
+        loser = player;
+    }
 
-    client.emit(event, JSON.stringify({ ...RESULT, 'data': { winner, 'reason': 'END_GAME' } }));
-    client.to(player.enemyClientID).emit(event, JSON.stringify({ ...RESULT, 'data': { winner, 'reason': 'END_GAME' } }));
-    await redis.delPlayer(player.enemyClientID);
+    // game record
+    await gameRecord(winner, loser, isTie);
+    // send data
+    const data = { winner: winner.userID, 'reason': 'END_GAME' };
+    client.emit(event, JSON.stringify({ ...RESULT, data }));
+    client.to(player.enemyClientID).emit(event, JSON.stringify({ ...RESULT, data }));
     await redis.delPlayer(clientID);
+    await redis.delPlayer(player.enemyClientID);
 }
 
 const COMMAND = {
@@ -226,16 +336,15 @@ module.exports = function (client) {
             return;
         }
 
-        // check player in game
-        if (playerJSON === undefined) {
-            client.emit(event, JSON.stringify(ERROR));
-            return;
-        }
-
         try {
             console.log('====================input====================');
             console.log(JSON.parse(message))
             console.log('=============================================');
+
+            // check player in game
+            if (playerJSON === undefined) {
+                throw new Error('player not in the game');
+            }
 
             const {
                 cmd,
@@ -256,17 +365,21 @@ module.exports = function (client) {
         }
     })
 
-    client.on('disconnect', async (res) => {
+    client.on('disconnect', async () => {
         const clientID = client.id;
         // send to enemy quit message
         const playerJSON = await redis.getPlayer(clientID);
         if (playerJSON !== undefined) {
             const player = JSON.parse(playerJSON);
-            client.to(player.enemyClientID).emit(event, JSON.stringify({ ...RESULT, 'data': { 'winner': player.enemyUserID, 'reason': 'QUIT' } }));
+            const enemy = JSON.parse(await redis.getPlayer(player.enemyClientID));
+            // game record
+            await gameRecord(enemy, player, false);
+            // send data
+            client.to(player.enemyClientID).emit(event, JSON.stringify({ ...RESULT, 'data': { 'winner': enemy.userID, 'reason': 'QUIT' } }));
             // kill enemy
             await redis.delPlayer(player.enemyClientID);
         }
-        // kill self
+        // kill player
         await redis.delPlayer(clientID);
         client.disconnect();
     })
