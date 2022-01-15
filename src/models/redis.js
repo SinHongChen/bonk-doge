@@ -52,6 +52,16 @@ const self = module.exports = {
                 resolve(false);
         })
     },
+    scan: (pattern) => {
+        return new Promise((resolve, reject) => {
+            redisClient.scan(0, 'MATCH', pattern, (err, result) => {
+                if (err)
+                    reject(err);
+                else
+                    resolve(result[1]);
+            })
+        })
+    },
     pushList: (key, value) => {
         return new Promise(async (resolve, reject) => {
             if (!key || !value)
@@ -130,6 +140,14 @@ const self = module.exports = {
                 })
         })
     },
+    getSessKeys: () => {
+        return self.scan('sess:*');
+    },
+    getAllSess: async () => {
+        const keys = await self.getSessKeys();
+        const values = await Promise.all(keys.map(item => self.get(item)));
+        return Object.fromEntries(keys.map((_, i) => [keys[i], JSON.parse(values[i])]))
+    },
     getSess: (sessionID) => {
         return self.get('sess:' + sessionID);
     },
@@ -155,16 +173,6 @@ const self = module.exports = {
                     reject(err);
                 else
                     resolve(exists);
-            })
-        })
-    },
-    scan: (cursor, pattern) => {
-        return new Promise((resolve, reject) => {
-            redisClient.scan(cursor, 'MATCH', pattern, (err, result) => {
-                if (err)
-                    reject(err);
-                else
-                    resolve(result);
             })
         })
     },

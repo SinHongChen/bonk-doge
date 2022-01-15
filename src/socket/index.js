@@ -6,9 +6,6 @@ const io = require('socket.io')(port, {
     }
 });
 
-// run background system
-require("./distributionSystem")();
-
 console.log('🛰  Bonk doge Socket.io listen on ' + port);
 
 io.of("/").on("connection", (socket) => {

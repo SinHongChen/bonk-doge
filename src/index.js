@@ -110,5 +110,8 @@ require('./migration').then(() => {
     server.listen(port);
     console.log(`🚀 Bonk doge Server ready at http://localhost:${port}`);
 
+    // run central control system
+    require("./socket/centralControlSystem")();
+
     require('./socket');
 });
